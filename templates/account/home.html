@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}Welcome - Blood Bank System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <h1 class="display-4 mb-4">Welcome to Blood Bank System</h1>
+            <p class="lead mb-4">A platform connecting blood donors with those in need.</p>
+            
+            {% if not user.is_authenticated %}
+                <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
+                    <a href="{% url 'register_donor' %}" class="btn btn-danger btn-lg px-4 gap-3">Register as Donor</a>
+                    <a href="{% url 'register_patient' %}" class="btn btn-outline-danger btn-lg px-4">Register as Patient</a>
+                </div>
+                <div class="mt-4">
+                    <p>Already have an account? <a href="{% url 'login' %}" class="text-danger">Login here</a></p>
+                </div>
+            {% else %}
+                <div class="alert alert-success">
+                    <h4>Welcome back, {{ user.get_full_name|default:user.username }}!</h4>
+                    <p>You are logged in as a {{ user.role|title }}.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 
