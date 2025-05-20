@@ -19,9 +19,12 @@
             </div>
         {% endfor %}
         <div class="d-grid">
-            <button type="submit" class="btn btn-danger">Login</button>
+            <button type="submit" class="btn btn-danger btn-lg w-100">Login</button>
         </div>
     </form>
+    <div class="text-center mt-2">
+        <a href="{% url 'forgot_password' %}">Forgot Password?</a>
+    </div>
     <div class="text-center mt-3">
         <p>Don't have an account?</p>
         <a href="{% url 'register_donor' %}" class="btn btn-outline-danger me-2">Register as Donor</a>

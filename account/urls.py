@@ -27,4 +27,6 @@ urlpatterns = [
     path('generate_report_pdf/', views.generate_report_pdf, name='generate_report_pdf'),
     path('request-blood/', views.request_blood, name='request_blood'),
     path('blood-request-history/', views.blood_request_history, name='blood_request_history'),
+    path('forgot-password/', views.forgot_password, name='forgot_password'),
+    path('reset-password/<int:user_id>/', views.reset_password, name='reset_password'),
 ]

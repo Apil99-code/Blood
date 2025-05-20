@@ -157,3 +157,17 @@ class BloodRequestForm(forms.ModelForm):
             if not cleaned_data.get(field):
                 self.add_error(field, 'This field is required.')
         return cleaned_data 
+
+class ForgotPasswordForm(forms.Form):
+    username = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Username'}))
+
+class ResetPasswordForm(forms.Form):
+    otp = forms.CharField(max_length=6, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'OTP'}))
+    new_password1 = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'New Password'}))
+    new_password2 = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Confirm New Password'}))
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('new_password1') != cleaned_data.get('new_password2'):
+            self.add_error('new_password2', "Passwords do not match.")
+        return cleaned_data 

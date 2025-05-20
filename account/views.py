@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.core.mail import send_mail, EmailMessage
 from django.conf import settings
 import random
-from .forms import UserRegistrationForm, OTPVerificationForm, LoginForm, ScheduleDonationForm, EditProfileForm, ChangePasswordWithOTPForm, DonationCenterForm, BloodRequestForm
+from .forms import UserRegistrationForm, OTPVerificationForm, LoginForm, ScheduleDonationForm, EditProfileForm, ChangePasswordWithOTPForm, DonationCenterForm, BloodRequestForm, ForgotPasswordForm, ResetPasswordForm
 from .models import User, OTP, UserProfile, DonationCenter, DonationAppointment, Notification, BloodStock, BloodRequest
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
@@ -193,6 +193,16 @@ def schedule_donation(request):
             appointment.donor = user
             appointment.status = 'PENDING'
             appointment.save()
+            # Notify all admins
+            from .models import User, Notification
+            admins = User.objects.filter(role='ADMIN')
+            for admin in admins:
+                Notification.objects.create(
+                    user=admin,
+                    title='New Donation Appointment',
+                    message=f'Donor {request.user.get_full_name()} scheduled a donation on {appointment.date} at {appointment.center.name}.',
+                    type='donation'
+                )
             messages.success(request, 'Donation appointment scheduled successfully!')
             return redirect('dashboard')
     else:
@@ -710,6 +720,16 @@ def request_blood(request):
             blood_request.patient = request.user
             blood_request.status = 'PENDING'
             blood_request.save()
+            # Notify all admins
+            from .models import User, Notification
+            admins = User.objects.filter(role='ADMIN')
+            for admin in admins:
+                Notification.objects.create(
+                    user=admin,
+                    title='New Blood Request',
+                    message=f'Patient {request.user.get_full_name()} requested {form.cleaned_data["quantity"]} units of {form.cleaned_data["blood_group"]}.',
+                    type='blood_request'
+                )
             messages.success(request, 'Blood request submitted successfully!')
             return redirect('blood_request_history')
     else:
@@ -726,3 +746,42 @@ def blood_request_history(request):
     if status_filter:
         requests = requests.filter(status=status_filter)
     return render(request, 'account/blood_request_history.html', {'requests': requests, 'status_filter': status_filter})
+
+def forgot_password(request):
+    if request.method == 'POST':
+        form = ForgotPasswordForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            user = User.objects.filter(username=username).first()
+            if user and user.email:
+                otp = generate_otp()
+                OTP.objects.create(user=user, otp=otp)
+                send_otp_email(user.email, otp)
+                request.session['reset_user_id'] = user.id
+                messages.success(request, 'OTP sent to your registered email.')
+                return redirect('reset_password', user_id=user.id)
+            else:
+                messages.error(request, 'Invalid username or no email found.')
+    else:
+        form = ForgotPasswordForm()
+    return render(request, 'account/forgot_password.html', {'form': form})
+
+def reset_password(request, user_id):
+    user = User.objects.get(id=user_id)
+    if request.method == 'POST':
+        form = ResetPasswordForm(request.POST)
+        if form.is_valid():
+            otp = form.cleaned_data['otp']
+            otp_obj = OTP.objects.filter(user=user, otp=otp, is_verified=False).first()
+            if otp_obj:
+                user.set_password(form.cleaned_data['new_password1'])
+                user.save()
+                otp_obj.is_verified = True
+                otp_obj.save()
+                messages.success(request, 'Password reset successful. Please login.')
+                return redirect('login')
+            else:
+                messages.error(request, 'Invalid OTP.')
+    else:
+        form = ResetPasswordForm()
+    return render(request, 'account/reset_password.html', {'form': form, 'user': user})
