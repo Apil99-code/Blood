@@ -3,8 +3,20 @@
 {% block title %}Login - Blood Bank System{% endblock %}
 
 {% block content %}
-<div class="form-container">
+<div class="form-container ph-login">
+    <div class="row no-wrap">
+        <div class="col-12text-center">
+            
     <h2 class="text-center mb-4">Login</h2>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="ph-login__img">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSQ8g69d_uUSjnQZJmm2YoNsYwMvRXvxo75Yg&s" alt="Login Image" class="img-fluid">
+
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            
     <form method="post">
         {% csrf_token %}
         {% for field in form %}
@@ -29,6 +41,8 @@
         <p>Don't have an account?</p>
         <a href="{% url 'register_donor' %}" class="btn btn-outline-danger me-2">Register as Donor</a>
         <a href="{% url 'register_patient' %}" class="btn btn-outline-danger">Register as Patient</a>
+    </div>
+        </div>
     </div>
 </div>
 {% endblock %} 
