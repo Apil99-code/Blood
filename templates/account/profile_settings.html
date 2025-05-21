@@ -38,17 +38,18 @@
                 <div class="row g-4 ">
                     <div class="col-md-3 text-center">
                         <div class="profile-picture-container position-relative mb-3">
-                            {% if user_profile and user_profile.profile_picture %}
-                                <img src="{{ user_profile.profile_picture.url }}" class="profile-picture rounded-circle shadow-sm" alt="Profile Picture" style="width: 150px; height: 150px; object-fit: cover;">
+                            {% if user.profile_picture %}
+                                <img src="{{ user.profile_picture.url }}" class="profile-picture rounded-circle shadow-sm" alt="Profile Picture" style="width: 150px; height: 150px; object-fit: cover;">
                             {% else %}
                                 <i class="fas fa-user-circle fa-6x text-secondary"></i>
                             {% endif %}
                             <label for="id_profile_picture" class="position-absolute bottom-0 end-0 bg-danger text-white rounded-circle p-2 cursor-pointer" style="cursor: pointer;">
                                 <i class="fas fa-camera"></i>
                             </label>
-                            {{ form.profile_picture }}
+                            <input type="file" name="profile_picture" id="id_profile_picture" style="display: none;">
                         </div>
-                        <small class="text-muted d-block">Click the camera icon to update your profile picture</small>
+                        <small class="text-muted d-block" id="profilePicHelp">Click the camera icon to update your profile picture</small>
+                        <div class="text-danger small" id="profilePicError" style="display:none;"></div>
                     </div>
                     <div class="col-md-9">
                         <div class="row g-3">
@@ -72,7 +73,11 @@
                             </div>
                             <div class="ph-form-input">
                                 <label class="form-label">Date of Birth</label>
-                                {{ form.date_of_birth }}
+                                {% if form.date_of_birth.field.disabled %}
+                                    <input type="date" class="form-control" value="{{ form.date_of_birth.value|default:user.date_of_birth|date:'Y-m-d' }}" readonly>
+                                {% else %}
+                                    {{ form.date_of_birth }}
+                                {% endif %}
                                 <div class="invalid-feedback">Please enter your date of birth.</div>
                             </div>
                             <div class="ph-form-input">
@@ -158,12 +163,24 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Profile picture preview
+    // Profile picture preview and file size validation
     const profilePictureInput = document.querySelector('#id_profile_picture');
+    const profilePicError = document.getElementById('profilePicError');
+    var saveProfileBtn = document.querySelector('#saveProfileBtn');
     if (profilePictureInput) {
         profilePictureInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
+                if (file.size > 2 * 1024 * 1024) { // 2MB
+                    profilePicError.textContent = 'Profile picture must be less than 2MB.';
+                    profilePicError.style.display = 'block';
+                    saveProfileBtn.disabled = true;
+                    return;
+                } else {
+                    profilePicError.textContent = '';
+                    profilePicError.style.display = 'none';
+                    saveProfileBtn.disabled = false;
+                }
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const img = document.querySelector('.profile-picture') || document.createElement('img');
@@ -176,21 +193,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     container.insertBefore(img, container.firstChild);
                 }
                 reader.readAsDataURL(file);
+            } else {
+                profilePicError.textContent = '';
+                profilePicError.style.display = 'none';
+                saveProfileBtn.disabled = false;
             }
         });
     }
 
     // Loading states
-    const saveProfileBtn = document.querySelector('#saveProfileBtn');
     const changePasswordBtn = document.querySelector('#changePasswordBtn');
-    
     if (saveProfileBtn) {
         saveProfileBtn.addEventListener('click', function() {
             this.querySelector('.spinner-border').classList.remove('d-none');
             this.disabled = true;
         });
     }
-    
     if (changePasswordBtn) {
         changePasswordBtn.addEventListener('click', function() {
             this.querySelector('.spinner-border').classList.remove('d-none');

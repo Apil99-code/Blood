@@ -16,6 +16,7 @@ from django.views.decorators.http import require_POST
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from io import BytesIO
+from datetime import timedelta
 
 def home(request):
     return render(request, 'account/home.html')
@@ -31,14 +32,39 @@ def dashboard(request):
 
     if user.role == 'DONOR':
         donor = user
-        # Example logic for context variables:
-        total_donations = 7  # Replace with actual query
-        last_donation = "2025-05-01"  # Replace with actual query
-        next_eligible_date = "2025-07-12"  # Replace with actual calculation
-        is_eligible = True  # Replace with actual logic
-        upcoming_appointment = None  # Replace with actual query
+        # Use real queries for donor dashboard context
+        from .models import DonationAppointment
+        from django.utils import timezone
+        from datetime import timedelta
+
+        # Total confirmed donations
+        total_donations = DonationAppointment.objects.filter(donor=donor, status='CONFIRMED').count()
+
+        # Last confirmed donation date
+        last_appointment = DonationAppointment.objects.filter(donor=donor, status='CONFIRMED').order_by('-date').first()
+        last_donation = last_appointment.date if last_appointment else None
+
+        # Next eligible date (90 days after last donation or today if never donated)
+        if last_donation:
+            next_eligible_date = last_donation + timedelta(days=90)
+        else:
+            next_eligible_date = timezone.now().date()
+
+        # Eligibility check
+        is_eligible = timezone.now().date() >= next_eligible_date
+
+        # Upcoming appointment (next pending or confirmed in the future)
+        upcoming_appointment = DonationAppointment.objects.filter(
+            donor=donor,
+            date__gte=timezone.now().date(),
+            status__in=['PENDING', 'CONFIRMED']
+        ).order_by('date').first()
+
+        # Lives saved estimate
         lives_saved = total_donations * 3
-        recent_donations = []  # Replace with actual query
+
+        # Recent donations (last 5)
+        recent_donations = DonationAppointment.objects.filter(donor=donor).order_by('-date')[:5]
 
         context.update({
             'donor': donor,
@@ -285,8 +311,11 @@ def profile_settings(request):
     if request.method == 'POST' and 'update_profile' in request.POST:
         form = EditProfileForm(request.POST, request.FILES, instance=user, user_profile=user_profile)
         if form.is_valid():
+            # Only update profile picture if a new file is uploaded
+            if 'profile_picture' in request.FILES:
+                user.profile_picture = request.FILES['profile_picture']
             form.save()
-            user.refresh_from_db()
+            # No need to refresh_from_db unless you need to reload related objects
             user_profile = getattr(user, 'userprofile', None)
             success_message = 'Profile updated successfully.'
         else:

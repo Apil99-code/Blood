@@ -83,6 +83,10 @@ BLOOD_GROUP_CHOICES = [
 class EditProfileForm(forms.ModelForm):
     blood_group = forms.ChoiceField(choices=BLOOD_GROUP_CHOICES, required=False)
     profile_picture = forms.ImageField(required=False)
+    phone_number = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'type': 'tel', 'class': 'form-control', 'placeholder': 'Phone Number'})
+    )
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'phone_number', 'date_of_birth', 'address', 'profile_picture']
@@ -93,6 +97,22 @@ class EditProfileForm(forms.ModelForm):
             self.fields['blood_group'].initial = user_profile.blood_group
             if user_profile.blood_group:
                 self.fields['blood_group'].disabled = True
+        # Make date_of_birth read-only after registration
+        if self.instance and self.instance.date_of_birth:
+            self.fields['date_of_birth'].disabled = True
+    def clean_phone_number(self):
+        phone = self.cleaned_data.get('phone_number', '').strip()
+        if phone:
+            if not phone.isdigit():
+                raise forms.ValidationError('Phone number must contain only digits.')
+            if len(phone) < 7 or len(phone) > 15:
+                raise forms.ValidationError('Phone number must be between 7 and 15 digits.')
+        return phone
+    def clean_profile_picture(self):
+        picture = self.cleaned_data.get('profile_picture')
+        if picture and picture.size > 2 * 1024 * 1024:
+            raise forms.ValidationError('Profile picture must be less than 2MB.')
+        return picture
     def save(self, commit=True):
         user = super().save(commit)
         blood_group = self.cleaned_data.get('blood_group')
