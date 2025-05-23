@@ -484,6 +484,9 @@ def admin_user_detail(request, user_id):
             user_obj.is_active = False
             user_obj.save()
         elif action == 'delete':
+            if user_obj.role == 'ADMIN':
+                messages.error(request, 'You cannot delete an admin user.')
+                return redirect('admin_users')
             user_obj.delete()
             return redirect('admin_users')
         # Add more actions as needed
